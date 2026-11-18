@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  # Used by `npm run deploy:backend` to redeploy the site after a backend change.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # Required status check for merging into main (branch protection).
+  # Runs with no AWS or Netlify credentials.
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Placeholder Amplify config (CI checks never touch AWS)
+        run: echo '{"version":"1.5"}' > amplify_outputs.json
+      - name: Type-check
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm test
+      - name: Build
+        run: npm run build
+
+  deploy:
+    name: deploy to Netlify
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # The Netlify token lives in this environment, which only main can use.
+    environment:
+      name: production
+      url: ${{ vars.SITE_URL }}
+    concurrency:
+      group: production-deploy
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Production Amplify config
+        env:
+          AMPLIFY_OUTPUTS: ${{ vars.AMPLIFY_OUTPUTS }}
+        run: |
+          if [ -z "$AMPLIFY_OUTPUTS" ]; then
+            echo "::error::AMPLIFY_OUTPUTS variable is missing. Run 'npm run deploy:backend' locally first."
+            exit 1
+          fi
+          printf '%s' "$AMPLIFY_OUTPUTS" > amplify_outputs.json
+      - run: npm run build
+      - name: Deploy to Netlify
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ vars.NETLIFY_SITE_ID }}
+          # Passed via env (never inlined into the script) to prevent injection.
+          COMMIT_MSG: ${{ github.event.head_commit.message || 'manual deploy' }}
+        run: >
+          npx --yes netlify-cli@26.1.0 deploy
+          --dir=out --prod --no-build
+          --site "$NETLIFY_SITE_ID"
+          --message "${GITHUB_SHA::7}: ${COMMIT_MSG%%$'\n'*}"

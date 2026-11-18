@@ -1,0 +1,426 @@
+:root {
+  --bg: #14121f;
+  --surface: #1e1b2e;
+  --surface-2: #2a2640;
+  --border: #3a3555;
+  --text: #ece9f5;
+  --muted: #a39dbd;
+  --accent: #8b7cf6;
+  --accent-hover: #a194ff;
+  --success: #30a46c;
+  --danger: #e5484d;
+  --radius: 14px;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: radial-gradient(circle at 20% 0%, #2b2150 0%, var(--bg) 55%) fixed;
+  color: var(--text);
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  min-height: 100vh;
+}
+
+button {
+  font: inherit;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 0.55em 1.1em;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.05s;
+}
+button:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+button:focus-visible {
+  outline: 3px solid var(--accent-hover);
+  outline-offset: 2px;
+}
+button.secondary {
+  background: var(--surface-2);
+  border-color: var(--border);
+  color: var(--text);
+}
+button.secondary:hover:not(:disabled) {
+  background: var(--border);
+}
+button.link {
+  background: none;
+  padding: 0;
+  color: var(--accent-hover);
+  text-decoration: underline;
+}
+
+.muted {
+  color: var(--muted);
+}
+.small {
+  font-size: 0.85rem;
+}
+
+/* ---------- layout ---------- */
+.site-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 0.5rem;
+}
+.site-header h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  letter-spacing: 0.02em;
+}
+.logo {
+  background: linear-gradient(90deg, #e5484d, #3e8ef7, #30a46c, #f5d90a);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-size: 1.1rem;
+}
+.account {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0.5rem 1rem 3rem;
+}
+
+.difficulty-tabs {
+  display: inline-flex;
+  gap: 0.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.25rem;
+  margin: 0.75rem 0 1rem;
+}
+.tab {
+  background: transparent;
+  color: var(--muted);
+}
+.tab:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.tab.active,
+.tab.active:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 1rem;
+  align-items: start;
+}
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+@media (max-width: 860px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+/* ---------- game ---------- */
+.game-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+.timer {
+  font-variant-numeric: tabular-nums;
+  font-size: 1.25rem;
+  font-weight: 700;
+  background: var(--surface-2);
+  border-radius: 10px;
+  padding: 0.25rem 0.75rem;
+}
+.notice {
+  background: rgba(139, 124, 246, 0.12);
+  border: 1px solid rgba(139, 124, 246, 0.35);
+  border-radius: 10px;
+  padding: 0.5rem 0.75rem;
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+}
+
+.secret-row,
+.board-row {
+  display: grid;
+  grid-template-columns: 2.5rem 1fr auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 10px;
+}
+.secret-row {
+  background: var(--surface-2);
+  margin-bottom: 0.5rem;
+}
+.board {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column-reverse; /* row 1 at the bottom, like the board game */
+  gap: 0.2rem;
+}
+.board-row.current {
+  background: rgba(139, 124, 246, 0.15);
+  outline: 1px solid rgba(139, 124, 246, 0.5);
+}
+.row-num {
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.pegs {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.peg {
+  --size: 1.7rem;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: calc(var(--size) * 0.45);
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.55);
+  background: #0e0c17;
+  border: 2px solid var(--border);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+  flex-shrink: 0;
+}
+.peg-lg {
+  --size: 2.4rem;
+}
+.peg-filled {
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: inset 0 -3px 6px rgba(0, 0, 0, 0.3), inset 0 3px 6px rgba(255, 255, 255, 0.35);
+}
+.peg-hidden {
+  color: var(--muted);
+  background: var(--surface);
+}
+button.peg:hover:not(:disabled) {
+  filter: brightness(1.15);
+  background: revert-layer;
+}
+
+.feedback {
+  display: inline-grid;
+  gap: 3px;
+  min-width: 2.2rem;
+}
+.feedback-empty {
+  min-width: 2.2rem;
+}
+.key {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  display: inline-block;
+}
+.key-black {
+  background: #111;
+  border: 1.5px solid #ece9f5;
+}
+.key-white {
+  background: #fff;
+  border: 1.5px solid #fff;
+}
+.key-none {
+  background: transparent;
+  border: 1.5px solid var(--border);
+}
+.key.inline {
+  vertical-align: middle;
+}
+
+.controls {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  background: var(--surface-2);
+  border-radius: 12px;
+  padding: 0.75rem;
+}
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+.start {
+  display: block;
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.8em;
+  font-size: 1.05rem;
+}
+.hint {
+  text-align: center;
+  font-size: 0.8rem;
+  margin: 0.5rem 0 0;
+}
+.result {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  text-align: center;
+}
+.result.won {
+  background: rgba(48, 164, 108, 0.15);
+  border: 1px solid var(--success);
+}
+.result.lost {
+  background: rgba(229, 72, 77, 0.12);
+  border: 1px solid var(--danger);
+}
+.error {
+  color: #ff8b8f;
+  margin: 0.75rem 0 0;
+}
+
+/* ---------- leaderboard ---------- */
+.leaderboard h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+.leaderboard table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+  font-variant-numeric: tabular-nums;
+}
+.leaderboard th,
+.leaderboard td {
+  padding: 0.4rem 0.3rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.leaderboard th {
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 0.8rem;
+}
+.leaderboard .num {
+  text-align: right;
+}
+.leaderboard .player {
+  max-width: 10rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.leaderboard tr.me td {
+  color: var(--accent-hover);
+  font-weight: 700;
+}
+.personal {
+  margin-top: 0.75rem;
+  font-size: 0.95rem;
+}
+
+.rules summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.rules ul {
+  padding-left: 1.1rem;
+  margin-bottom: 0;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/* ---------- sign-in dialog ---------- */
+.signin-dialog {
+  border: none;
+  border-radius: var(--radius);
+  padding: 0;
+  background: transparent;
+  max-width: min(480px, calc(100vw - 2rem));
+  width: 100%;
+}
+.signin-dialog::backdrop {
+  background: rgba(10, 8, 20, 0.7);
+  backdrop-filter: blur(3px);
+}
+.signin-dialog .close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 1;
+  background: transparent;
+  color: #444;
+  padding: 0.25rem 0.6rem;
+}
+.signin-dialog [data-amplify-authenticator] [data-amplify-router] {
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.signin-dialog [data-amplify-authenticator] {
+  --amplify-components-button-primary-background-color: var(--accent);
+  --amplify-components-button-primary-hover-background-color: #6f5ff0;
+  --amplify-components-tabs-item-active-color: var(--accent);
+  --amplify-components-tabs-item-active-border-color: var(--accent);
+}
