@@ -11,7 +11,7 @@
  * Requires: AWS CLI profile (package.json config.awsProfile) + `gh auth login`.
  */
 import { execSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -24,9 +24,18 @@ const run = (cmd, opts = {}) => {
   return execSync(cmd, { stdio: "inherit", env, ...opts });
 };
 
-run(`npx ampx pipeline-deploy --branch main --app-id ${amplifyAppId}`);
-
+// pipeline-deploy overwrites ./amplify_outputs.json; keep local dev pointed at the sandbox.
+const localOutputs = new URL("../amplify_outputs.json", import.meta.url);
 const dir = mkdtempSync(join(tmpdir(), "mastermind-outputs-"));
+const backup = join(dir, "local-amplify_outputs.json");
+if (existsSync(localOutputs)) copyFileSync(localOutputs, backup);
+
+try {
+  run(`npx ampx pipeline-deploy --branch main --app-id ${amplifyAppId}`);
+} finally {
+  if (existsSync(backup)) copyFileSync(backup, localOutputs);
+}
+
 try {
   run(`npx ampx generate outputs --branch main --app-id ${amplifyAppId} --out-dir "${dir}"`);
   const outputs = readFileSync(join(dir, "amplify_outputs.json"), "utf8");
