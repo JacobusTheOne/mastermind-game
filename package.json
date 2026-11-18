@@ -43,6 +43,6 @@
     "githubRepo": "JacobusTheOne/mastermind-game"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   }
 }

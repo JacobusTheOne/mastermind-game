@@ -23,12 +23,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
-      - run: npm ci
+      # `npm ci` rejects this lockfile because @aws-amplify/data-construct and
+      # graphql-api-construct publish incomplete bundled dependencies (upstream
+      # issue). `npm install` + "lockfile unchanged" gives the same guarantee.
+      - name: Install dependencies (locked)
+        run: |
+          npm install --no-audit --no-fund
+          git diff --exit-code package-lock.json || {
+            echo "::error::package-lock.json is out of date. Run 'npm install' locally and commit it."
+            exit 1
+          }
       - name: Placeholder Amplify config (CI checks never touch AWS)
         run: echo '{"version":"1.5"}' > amplify_outputs.json
       - name: Type-check
@@ -52,12 +61,15 @@ jobs:
       group: production-deploy
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
-      - run: npm ci
+      - name: Install dependencies (locked)
+        run: |
+          npm install --no-audit --no-fund
+          git diff --exit-code package-lock.json
       - name: Production Amplify config
         env:
           AMPLIFY_OUTPUTS: ${{ vars.AMPLIFY_OUTPUTS }}
