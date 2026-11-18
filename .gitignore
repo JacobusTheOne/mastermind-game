@@ -41,3 +41,7 @@ amplify_outputs*
 amplifyconfiguration*
 # netlify
 .netlify
+
+# secrets
+.env
+.env.*
