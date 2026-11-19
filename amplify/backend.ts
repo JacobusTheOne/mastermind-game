@@ -1,5 +1,5 @@
 import { defineBackend } from "@aws-amplify/backend";
-import { RemovalPolicy, Stack } from "aws-cdk-lib";
+import { RemovalPolicy, Stack, Tags } from "aws-cdk-lib";
 import { AttributeType, BillingMode, Table } from "aws-cdk-lib/aws-dynamodb";
 import { PolicyStatement } from "aws-cdk-lib/aws-iam";
 import { auth } from "./auth/resource";
@@ -7,6 +7,12 @@ import { data } from "./data/resource";
 import { game } from "./functions/game/resource";
 
 const backend = defineBackend({ auth, data, game });
+
+// Tag every resource (root and nested stacks) for Tag Editor searches and cleanup.
+// Cost allocation tags can't be activated from a project account, so these don't appear in Cost Explorer.
+// Not reached: the Amplify-managed Score model table (its custom resource has no tags property).
+Tags.of(backend.stack).add("Project", "mastermind");
+Tags.of(backend.stack).add("Owner", "JacobusTheOne");
 
 const gameLambda = backend.game.resources.lambda;
 const scoreTable = backend.data.resources.tables["Score"];
