@@ -2,7 +2,7 @@
 /**
  * Deploys the PRODUCTION backend (Cognito, AppSync, Lambda, DynamoDB) from this
  * machine, then publishes the generated amplify_outputs.json to GitHub as the
- * AMPLIFY_OUTPUTS repo variable and re-runs the site deploy so Netlify picks it up.
+ * AMPLIFY_OUTPUTS repo variable and re-runs the site deploy so Cloudflare serves a site built with it.
  *
  * Why from this machine: the AWS project's managed policies block GitHub OIDC
  * federation, and we chose not to store long-lived AWS keys in GitHub.

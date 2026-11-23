@@ -39,7 +39,9 @@ next-env.d.ts
 .amplify
 amplify_outputs*
 amplifyconfiguration*
-# netlify
+# cloudflare (wrangler local state)
+.wrangler
+# netlify (remove once the Netlify site is deleted)
 .netlify
 
 # secrets
