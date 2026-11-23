@@ -4,9 +4,9 @@
 
 Crack the secret color code in as few guesses as possible, against the clock.
 
-**Play:** https://mastermind-game-789.netlify.app
+**Play:** https://mastermind.jacobus-jacobs1.workers.dev
 
-Next.js frontend on Netlify + AWS Amplify Gen 2 backend (Region **us-east-2**).
+Next.js frontend on Cloudflare + AWS Amplify Gen 2 backend (Region **us-east-2**).
 
 ## Features
 
@@ -23,7 +23,7 @@ Next.js frontend on Netlify + AWS Amplify Gen 2 backend (Region **us-east-2**).
 
 | Piece | Service |
 |---|---|
-| Frontend | Next.js static export (`out/`) hosted on Netlify |
+| Frontend | Next.js static export (`out/`) served by Cloudflare (Worker `mastermind`, static assets) |
 | Login | Cognito user pool (email + password, `preferred_username` = player name) |
 | Game API | AppSync mutations `startGame` / `submitGuess` → Lambda `mastermind-game` |
 | In-progress games | DynamoDB `GamesTable` (private, deleted by TTL after 24h) |
@@ -38,7 +38,7 @@ wins), and a conditional write rejects double-submitted guesses.
 
 | | Production | Development (sandbox) |
 |---|---|---|
-| Frontend | Netlify site `mastermind-game-789` | `npm run dev` on localhost |
+| Frontend | Cloudflare Worker `mastermind` | `npm run dev` on localhost |
 | Backend | Amplify app `d2xq3zqie15tgt`, branch `main` | `npx ampx sandbox` (per developer) |
 | Deployed by | `npm run deploy:backend` (backend), GitHub Actions (frontend) | `npx ampx sandbox` |
 | Data | Real players and high scores | Test data only |
@@ -49,7 +49,7 @@ real high scores.
 ## Project layout
 
 ```
-.github/workflows/ci.yml      PR checks + Netlify deploy
+.github/workflows/ci.yml      Checks on dev/PRs + Cloudflare deploy from main
 amplify/
   auth/resource.ts            Cognito config
   data/resource.ts            Score model + custom mutations
@@ -61,7 +61,7 @@ amplify/
 app/                          Next.js App Router pages
 components/                   Game board, leaderboard, sign-in dialog
 lib/                          Amplify client, game engines, formatting
-public/_headers               Netlify security headers
+public/_headers               Security headers (read by Cloudflare)
 scripts/
   deploy-backend.mjs          Production backend deploy (npm run deploy:backend)
   smoke-test.ts               End-to-end test against a deployed backend
@@ -105,15 +105,27 @@ win with server time and personal best, and that finished games reject more gues
 
 ## Making changes
 
-`main` is protected. Every change goes through a pull request:
+Two long-lived branches:
+
+- **`dev`**: day-to-day work (optionally via feature branches off `dev`). Pushed to GitHub as a
+  backup; CI runs the `test` job on it, but **dev never deploys**.
+- **`main`**: the live site. Only a push to `main` deploys, and `main` is protected, so it only
+  changes through a pull request from `dev`.
 
 ```bash
-git switch -c my-change
+git switch dev
 # ...edit, commit...
-git push -u origin my-change
-gh pr create --fill
+git push                    # backup + tests, no deploy
+```
+
+To release, open a pull request from `dev` to `main` and merge it with a **merge commit** (not
+squash, so `dev` stays in line with `main`):
+
+```bash
+gh pr create --base main --head dev --fill
 gh pr checks --watch        # wait for the "test" check
-gh pr merge --squash        # only possible once "test" passed
+gh pr merge --merge         # deploys to Cloudflare
+git fetch && git merge --ff-only origin/main && git push   # on dev: catch up with the merge commit
 ```
 
 Branch protection rules on `main`:
@@ -128,9 +140,11 @@ Branch protection rules on `main`:
 ```
 pull request ──► "test": install (locked), type-check, unit tests, build ──► required to merge
 
-merge to main ──► "test" ──► "deploy to Netlify"
+push to dev ──► "test" (no deploy)
+
+merge to main ──► "test" ──► "deploy to Cloudflare"
                              build with production config (AMPLIFY_OUTPUTS)
-                             netlify deploy --prod
+                             wrangler deploy (out/ as Worker "mastermind")
 
 backend change ──► npm run deploy:backend   (from your machine)
                     ├─ deploys production backend (Amplify app d2xq3zqie15tgt, branch main)
@@ -138,10 +152,11 @@ backend change ──► npm run deploy:backend   (from your machine)
                     └─ triggers the workflow to redeploy the site
 ```
 
-- The `test` job runs with **no AWS or Netlify credentials** and a placeholder Amplify config.
-- The `deploy to Netlify` job runs only on `main`, in the `production` GitHub environment, which
-  is the only place the Netlify token is available. Deploys never run concurrently.
-- Netlify never builds anything itself; it only serves what GitHub Actions uploads.
+- The `test` job runs with **no AWS or Cloudflare credentials** and a placeholder Amplify config.
+- The `deploy to Cloudflare` job runs only on `main`, in the `production` GitHub environment, which
+  is the only place the Cloudflare token is available. Deploys never run concurrently.
+- Cloudflare is not connected to GitHub and never builds anything itself; it only serves what
+  GitHub Actions uploads (configured in `wrangler.jsonc`).
 
 ### Deploying backend changes
 
@@ -168,19 +183,19 @@ into the workflow.
 | Name | Kind | Where | Set by |
 |---|---|---|---|
 | `AMPLIFY_OUTPUTS` | variable | repository | `npm run deploy:backend` |
-| `NETLIFY_SITE_ID` | variable | repository | one-time setup |
+| `CLOUDFLARE_ACCOUNT_ID` | variable | repository | one-time setup |
 | `SITE_URL` | variable | repository | one-time setup |
-| `NETLIFY_AUTH_TOKEN` | secret | `production` environment (main only) | one-time setup |
+| `CLOUDFLARE_API_TOKEN` | secret | `production` environment (main only) | one-time setup |
 
 `AMPLIFY_OUTPUTS` is not secret: every value in it ships inside the public JavaScript bundle.
 
-### Rotating the Netlify token
+### Rotating the Cloudflare token
 
-Netlify tokens expire. When the deploy job fails with an authentication error:
+When the deploy job fails with an authentication error (or the token's expiry date passes):
 
-1. Netlify → User settings → Applications → Personal access tokens → **New access token**
-   (set an expiration), and delete the old one.
-2. `gh secret set NETLIFY_AUTH_TOKEN --env production --repo JacobusTheOne/mastermind-game`
+1. Cloudflare dashboard → My Profile → API Tokens → **Create Token** → template
+   **Edit Cloudflare Workers** (limit it to your account, set an expiry), and delete the old one.
+2. `gh secret set CLOUDFLARE_API_TOKEN --env production --repo JacobusTheOne/mastermind-game`
    (paste the token when prompted; also update your local `.env` if you keep a copy there).
 3. Re-run the failed workflow: `gh run rerun --failed`.
 
@@ -211,11 +226,11 @@ Check whether a spend limit has paused the AWS project (AWS Settings → Billing
 ## Costs and cleanup
 
 Everything is pay-per-request (Lambda, AppSync, DynamoDB on-demand, Cognito) and costs next to
-nothing for a hobby game. Netlify hosting is on the free plan. Cognito's built-in email sender is
+nothing for a hobby game. Cloudflare hosting is on the free plan. Cognito's built-in email sender is
 limited (about 50 emails/day); switch to Amazon SES before a large public launch.
 
 | To remove | Command |
 |---|---|
 | Your sandbox backend | `npx ampx sandbox delete --profile aws-project` |
 | Production backend | Delete the CloudFormation stack for app `d2xq3zqie15tgt` branch `main`, then the Amplify app |
-| Website | Delete the Netlify site `mastermind-game-789` |
+| Website | Delete the Cloudflare Worker `mastermind` (Workers & Pages) |
